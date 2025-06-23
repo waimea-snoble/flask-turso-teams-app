@@ -28,8 +28,23 @@ init_datetime(app)  # Handle UTC dates in timestamps
 # Home page route
 #-----------------------------------------------------------
 @app.get("/")
-def index():
-    return render_template("pages/home.jinja")
+def show_all_teams():
+    with connect_db() as client:
+        # Get all the things from the DB
+        sql = """
+            SELECT teams.code,
+                   teams.name
+
+            FROM teams
+
+            ORDER BY teams.name ASC
+        """
+        params=[]
+        result = client.execute(sql, params)
+        teams = result.rows
+
+        # And show them on the page
+        return render_template("pages/home.jinja", teams=teams)
 
 
 #-----------------------------------------------------------
@@ -104,10 +119,10 @@ def show_one_thing(id):
 #-----------------------------------------------------------
 @app.post("/add")
 @login_required
-def add_a_thing():
+def add_a_team():
     # Get the data from the form
     name  = request.form.get("name")
-    price = request.form.get("price")
+    description = request.form.get("description")
 
     # Sanitise the text inputs
     name = html.escape(name)
@@ -117,8 +132,8 @@ def add_a_thing():
 
     with connect_db() as client:
         # Add the thing to the DB
-        sql = "INSERT INTO things (name, price, user_id) VALUES (?, ?, ?)"
-        params = [name, price, user_id]
+        sql = "INSERT INTO teams (name, description, user_id) VALUES (?, ?, ?)"
+        params = [name, description, user_id]
         client.execute(sql, params)
 
         # Go back to the home page
@@ -230,7 +245,7 @@ def login_user():
             # Hash matches?
             if check_password_hash(hash, password):
                 # Yes, so save info in the session
-                session["user_id"]   = user["id"]
+                session["users_id"]   = user["id"]
                 session["user_name"] = user["name"]
                 session["logged_in"] = True
 
