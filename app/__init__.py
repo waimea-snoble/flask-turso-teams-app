@@ -83,21 +83,19 @@ def show_all_things():
 #-----------------------------------------------------------
 # Thing page route - Show details of a single thing
 #-----------------------------------------------------------
-@app.get("/thing/<int:id>")
-def show_one_thing(id):
+@app.get("/team/<int:id>")
+def show_one_team(id):
     with connect_db() as client:
         # Get the thing details from the DB, including the owner info
         sql = """
-            SELECT things.id,
-                   things.name,
-                   things.price,
-                   things.user_id,
-                   users.name AS owner
+            SELECT teams.id,
+                   teams.name,
+                   teams.description,
+                   users.id AS manager
 
-            FROM things
-            JOIN users ON things.user_id = users.id
+            FROM teams
 
-            WHERE things.id=?
+            WHERE teams.id=?
         """
         params = [id]
         result = client.execute(sql, params)
@@ -105,8 +103,8 @@ def show_one_thing(id):
         # Did we get a result?
         if result.rows:
             # yes, so show it on the page
-            thing = result.rows[0]
-            return render_template("pages/thing.jinja", thing=thing)
+            team = result.rows[0]
+            return render_template("pages/team.jinja", team=team)
 
         else:
             # No, so show error
@@ -122,23 +120,28 @@ def show_one_thing(id):
 def add_a_team():
     # Get the data from the form
     name  = request.form.get("name")
+    code  = request.form.get("code")
+    website  = request.form.get("website")
     description = request.form.get("description")
 
     # Sanitise the text inputs
     name = html.escape(name)
+    code = html.escape(code)
+    website = html.escape(website)
+    description = html.escape(description)
 
     # Get the user id from the session
     user_id = session["user_id"]
 
     with connect_db() as client:
-        # Add the thing to the DB
-        sql = "INSERT INTO teams (name, description, user_id) VALUES (?, ?, ?)"
-        params = [name, description, user_id]
+        # Add the team to the DB
+        sql = "INSERT INTO teams (name, code, description, website, manager) VALUES (?, ?, ?, ?, ?)"
+        params = [name, code, description, website, user_id]
         client.execute(sql, params)
 
         # Go back to the home page
-        flash(f"Thing '{name}' added", "success")
-        return redirect("/things")
+        flash(f"Team '{name}' added", "success")
+        return redirect("/")
 
 
 #-----------------------------------------------------------
@@ -245,7 +248,7 @@ def login_user():
             # Hash matches?
             if check_password_hash(hash, password):
                 # Yes, so save info in the session
-                session["users_id"]   = user["id"]
+                session["user_id"]   = user["id"]
                 session["user_name"] = user["name"]
                 session["logged_in"] = True
 
